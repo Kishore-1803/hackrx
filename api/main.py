@@ -12,14 +12,9 @@ from agno.models.google import Gemini
 from agno.knowledge.pdf import PDFKnowledgeBase
 from agno.vectordb.pineconedb import PineconeDb
 from agno.embedder.google import GeminiEmbedder
-import nltk
-
 
 # === FastAPI App Initialization ===
 app = FastAPI()
-os.environ["NLTK_DATA"] = "/tmp/nltk_data"
-nltk.data.path.append("/tmp/nltk_data")
-nltk.download("punkt", download_dir="/tmp/nltk_data")
 
 
 # === API Keys ===
@@ -40,7 +35,7 @@ vector_db = PineconeDb(
     spec={"serverless": {"cloud": "aws", "region": "us-east-1"}},
     api_key=PINECONE_API_KEY,
     embedder=GeminiEmbedder(api_key=GOOGLE_API_KEY_2),
-    use_hybrid_search=True,
+    use_hybrid_search=False,
     hybrid_alpha=0.5,
 )
 
