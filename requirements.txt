@@ -6,3 +6,5 @@ python-multipart
 agno
 pinecone==5.4.2
 google-genai
+pypdf
+
