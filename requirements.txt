@@ -2,8 +2,9 @@ fastapi==0.115.6
 uvicorn==0.32.1
 pydantic==2.10.3
 requests==2.32.3
-agno==1.7.6
+packaging==24.0
 pinecone==5.4.2
+agno==1.7.6
 google-genai==1.27.0
 python-multipart==0.0.20
 pypdf==4.2.0
