@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+requests
+pydantic
+python-multipart
+agno
+pinecone==5.4.2
+tempfile
+os
+asyncio
+time
+typing
