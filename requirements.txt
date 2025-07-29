@@ -9,4 +9,3 @@ agno==1.7.6
 google-genai==1.27.0
 python-multipart==0.0.20
 pypdf==4.2.0
-nltk==3.8.1
