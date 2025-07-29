@@ -12,9 +12,15 @@ from agno.models.google import Gemini
 from agno.knowledge.pdf import PDFKnowledgeBase
 from agno.vectordb.pineconedb import PineconeDb
 from agno.embedder.google import GeminiEmbedder
+import nltk
+
 
 # === FastAPI App Initialization ===
 app = FastAPI()
+os.environ["NLTK_DATA"] = "/tmp/nltk_data"
+nltk.data.path.append("/tmp/nltk_data")
+nltk.download("punkt", download_dir="/tmp/nltk_data")
+
 
 # === API Keys ===
 GOOGLE_API_KEY = "AIzaSyCAZN6O2VZeLappQbR-gDCgaimKp0AgVNM"  # flash
