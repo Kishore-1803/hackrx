@@ -1,9 +1,8 @@
 fastapi==0.115.6
-uvicorn[standard]==0.32.1
+uvicorn==0.32.1
 pydantic==2.10.3
 requests==2.32.3
-agno==2.8.46
+agno==1.7.6
 pinecone==5.4.2
 google-generativeai==0.8.3
 python-multipart==0.0.20
-packaging
