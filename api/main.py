@@ -15,10 +15,12 @@ from agno.embedder.google import GeminiEmbedder
 # === FastAPI App Initialization ===
 app = FastAPI()
 
+# ...existing code...
+
 # === API Keys ===
-GOOGLE_API_KEY = "AIzaSyCAZN6O2VZeLappQbR-gDCgaimKp0AgVNM"
-GOOGLE_API_KEY_2 = "AIzaSyDjHoj9UvZlTjDFlqXqZUA8lGHE5Igbuyc"
-PINECONE_API_KEY = "pcsk_2Gw3DS_Snmy1vda8KbGUcrPw15ib4Ts4LWm6chP9sKLy5iJuzEkoW1k5avXyFMX8LLfHHL"
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY_2 = os.getenv("GOOGLE_API_KEY_2")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
 # === Pinecone Setup ===
 PINECONE_INDEX_NAME = "hackrx-policy-index-v2"
