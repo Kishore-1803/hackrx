@@ -10,33 +10,26 @@ import time
 from agno.agent import Agent
 from agno.models.google import Gemini
 from agno.knowledge.pdf import PDFKnowledgeBase
-from agno.vectordb.pineconedb import PineconeDb
+from agno.vectordb.pgvector import PgVector
 from agno.embedder.google import GeminiEmbedder
 
 # === FastAPI App Initialization ===
 app = FastAPI()
 
-
 # === API Keys ===
 GOOGLE_API_KEY = "AIzaSyCAZN6O2VZeLappQbR-gDCgaimKp0AgVNM"  # flash
 GOOGLE_API_KEY_2 = "AIzaSyC-1DsPyxFMa0NNPa6cViSZxs0Ypq4qx0E"  # embedder
-PINECONE_API_KEY = "pcsk_2Gw3DS_Snmy1vda8KbGUcrPw15ib4Ts4LWm6chP9sKLy5iJuzEkoW1k5avXyFMX8LLfHHL"
 
 # === Rate Limiting ===
 last_request_time = 0
 REQUEST_INTERVAL = 12  # 12 seconds between requests (5 requests/minute)
 
-# === Pinecone Setup ===
-PINECONE_INDEX_NAME = "hackrx-policy-index-v2"
-vector_db = PineconeDb(
-    name=PINECONE_INDEX_NAME,
-    dimension=1536,
-    metric="cosine",
-    spec={"serverless": {"cloud": "aws", "region": "us-east-1"}},
-    api_key=PINECONE_API_KEY,
+# === PgVector Setup ===
+db_url = "postgresql://postgres:Kishsiva%40123@db.ugxvebypwxhcgrvlhgad.supabase.co:5432/postgres"
+vector_db = PgVector(
+    table_name="hackrx_policy_documents",
+    db_url=db_url,
     embedder=GeminiEmbedder(api_key=GOOGLE_API_KEY_2),
-    use_hybrid_search=False,
-    hybrid_alpha=0.5,
 )
 
 # === Pydantic Models ===
