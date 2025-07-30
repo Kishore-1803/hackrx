@@ -4,8 +4,8 @@ requests
 pydantic
 python-multipart
 agno
-pgvector 
-pypdf 
+pgvector
+pypdf
 psycopg2-binary
 sqlalchemy
-psycopg2-binary
+google-genai
