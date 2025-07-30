@@ -4,31 +4,33 @@ from typing import List
 import requests
 import tempfile
 import os
-import asyncio
-import time
+import json
 
 from agno.agent import Agent
 from agno.models.google import Gemini
 from agno.knowledge.pdf import PDFKnowledgeBase
-from agno.vectordb.pgvector import PgVector
+from agno.vectordb.pineconedb import PineconeDb
 from agno.embedder.google import GeminiEmbedder
 
 # === FastAPI App Initialization ===
 app = FastAPI()
 
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-GOOGLE_API_KEY_2 = os.environ.get("GOOGLE_API_KEY_2")
+# === API Keys ===
+GOOGLE_API_KEY = "AIzaSyCAZN6O2VZeLappQbR-gDCgaimKp0AgVNM"
+GOOGLE_API_KEY_2 = "AIzaSyDjHoj9UvZlTjDFlqXqZUA8lGHE5Igbuyc"
+PINECONE_API_KEY = "pcsk_2Gw3DS_Snmy1vda8KbGUcrPw15ib4Ts4LWm6chP9sKLy5iJuzEkoW1k5avXyFMX8LLfHHL"
 
-# === Rate Limiting ===
-last_request_time = 0
-REQUEST_INTERVAL = 12  # 12 seconds between requests (5 requests/minute)
-
-# === PgVector Setup ===
-db_url = "postgresql://postgres:Kishsiva%40123@db.ugxvebypwxhcgrvlhgad.supabase.co:5432/postgres"
-vector_db = PgVector(
-    table_name="hackrx_policy_documents",
-    db_url=db_url,
+# === Pinecone Setup ===
+PINECONE_INDEX_NAME = "hackrx-policy-index-v2"
+vector_db = PineconeDb(
+    name=PINECONE_INDEX_NAME,
+    dimension=1536,
+    metric="cosine",
+    spec={"serverless": {"cloud": "aws", "region": "us-east-1"}},
+    api_key=PINECONE_API_KEY,
     embedder=GeminiEmbedder(api_key=GOOGLE_API_KEY_2),
+    use_hybrid_search=True,
+    hybrid_alpha=0.5,
 )
 
 # === Pydantic Models ===
@@ -39,50 +41,9 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answers: List[str]
 
-# === Rate Limited Helper Function ===
-async def get_answer_with_rate_limit(agent, question: str, retries: int = 3, timeout: int = 60):
-    global last_request_time
-    
-    for attempt in range(retries):
-        try:
-            # Rate limiting: ensure 12 seconds between requests
-            current_time = time.time()
-            time_since_last = current_time - last_request_time
-            if time_since_last < REQUEST_INTERVAL:
-                wait_time = REQUEST_INTERVAL - time_since_last
-                await asyncio.sleep(wait_time)
-            
-            last_request_time = time.time()
-            
-            # Execute with timeout
-            response = await asyncio.wait_for(
-                asyncio.to_thread(agent.run, question), 
-                timeout=timeout
-            )
-            return response
-            
-        except asyncio.TimeoutError:
-            if attempt < retries - 1:
-                await asyncio.sleep(5)  # Wait before retry
-            else:
-                return "Error: Request timed out after 60 seconds"
-                
-        except Exception as e:
-            err = str(e)
-            if "RESOURCE_EXHAUSTED" in err or "429" in err or "503" in err:
-                if attempt < retries - 1:
-                    wait_time = 30 * (attempt + 1)  # 30, 60, 90 seconds
-                    await asyncio.sleep(wait_time)
-                else:
-                    return "Error: Gemini rate limit exceeded. Please try again later."
-            else:
-                return f"Error: {err}"
-    
-    return "Error: All retry attempts failed"
-
-# === POST Endpoint ===
+# === Endpoint ===
 @app.post("/hackrx/run", response_model=QueryResponse)
-async def ask_document_questions(
+def ask_document_questions(
     body: QueryRequest,
     authorization: str = Header(...)
 ):
@@ -90,44 +51,68 @@ async def ask_document_questions(
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid Authorization header")
 
-    # === Download PDF to temp file ===
+    # === Download PDF ===
     try:
         response = requests.get(body.documents, timeout=30)
         response.raise_for_status()
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
             temp_pdf.write(response.content)
             pdf_path = temp_pdf.name
+        print(f"✅ PDF downloaded: {pdf_path}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error downloading PDF: {str(e)}")
 
-    # === Vector DB and Agent Setup ===
+    # === Load PDF ===
     try:
         knowledge_base = PDFKnowledgeBase(path=pdf_path, vector_db=vector_db)
-        knowledge_base.load(recreate=False, upsert=True)
+        knowledge_base.load(recreate=True, upsert=True)
+        print(f"✅ Knowledge base loaded.")
 
         agent = Agent(
-            model=Gemini(id="gemini-2.5-flash", api_key=GOOGLE_API_KEY),
+            model=Gemini(id="gemini-2.0-flash", api_key=GOOGLE_API_KEY),
             knowledge=knowledge_base,
-            show_tool_calls=False,
-            markdown=True,
+            show_tool_calls=True,
+            markdown=False,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Vector DB error: {str(e)}")
 
-    # === Ask Questions with Rate Limiting ===
-    answers = []
-    for i, question in enumerate(body.questions):
-        try:
-            print(f"Processing question {i+1}/{len(body.questions)}: {question[:50]}...")
-            response = await get_answer_with_rate_limit(agent, question)
-            
-            if isinstance(response, str):
-                answers.append(response)
-            else:
-                answers.append(response.content.strip())
-                
-        except Exception as e:
-            answers.append(f"Error: {str(e)}")
+    # === Prompt Construction ===
+    questions_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(body.questions)])
+    prompt = f"""You are a helpful assistant.
+
+    Based on the uploaded document, answer the following questions only using the document content.
+
+    Return the answers in this exact format:
+    {{ "answers": [ "Answer to question 1", "Answer to question 2", "..." ] }}
+
+    Do not include triple backticks or markdown formatting. Just provide answer for the each question in a single line.
+
+    Questions:
+    {questions_text}
+    """
+
+    try:
+        # Call Gemini
+        response = agent.run(prompt)
+        raw_output = response.content.strip()
+        print(f"🧠 Raw Gemini Response:\n{raw_output}\n")
+
+        if raw_output.startswith("```json"):
+            raw_output = raw_output.replace("```json", "").replace("```", "").strip()
+        elif raw_output.startswith("```"):
+            raw_output = raw_output.replace("```", "").strip()
+
+        # Try parsing the raw output as JSON
+        answers_json = json.loads(raw_output)
+        answers = answers_json.get("answers", [])
+
+        if not isinstance(answers, list):
+            raise ValueError("Invalid JSON structure: 'answers' is not a list.")
+
+    except Exception as e:
+        print(f"Parsing Error: {str(e)}")
+        answers = [f"Error: Failed to parse Gemini response. {str(e)}"]
 
     # === Cleanup ===
     try:
