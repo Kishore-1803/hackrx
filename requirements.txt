@@ -6,6 +6,6 @@ python-multipart
 agno
 pgvector 
 pypdf 
-"psycopg[binary]" 
+psycopg2-binary
 sqlalchemy
 psycopg2-binary
