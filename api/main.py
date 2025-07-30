@@ -31,7 +31,7 @@ vector_db = PineconeDb(
     spec={"serverless": {"cloud": "aws", "region": "us-east-1"}},
     api_key=PINECONE_API_KEY,
     embedder=GeminiEmbedder(api_key=GOOGLE_API_KEY_2),
-    use_hybrid_search=True,
+    use_hybrid_search=False,
     hybrid_alpha=0.5,
 )
 
