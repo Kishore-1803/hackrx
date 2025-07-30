@@ -4,8 +4,5 @@ requests
 pydantic
 python-multipart
 agno
-pgvector
-pypdf
-psycopg2-binary
-sqlalchemy
+pinecone-client==5.4.2
 google-genai
