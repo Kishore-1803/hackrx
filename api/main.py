@@ -16,10 +16,6 @@ from agno.embedder.google import GeminiEmbedder
 # === FastAPI App Initialization ===
 app = FastAPI()
 
-# === API Keys ===
-GOOGLE_API_KEY = "AIzaSyCAZN6O2VZeLappQbR-gDCgaimKp0AgVNM"  # flash
-GOOGLE_API_KEY_2 = "AIzaSyC-1DsPyxFMa0NNPa6cViSZxs0Ypq4qx0E"  # embedder
-
 # === Rate Limiting ===
 last_request_time = 0
 REQUEST_INTERVAL = 12  # 12 seconds between requests (5 requests/minute)
