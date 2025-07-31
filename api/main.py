@@ -67,7 +67,7 @@ def ask_document_questions(
     # === Load PDF ===
     try:
         knowledge_base = PDFKnowledgeBase(path=pdf_path, vector_db=vector_db)
-        knowledge_base.load(recreate=True, upsert=True)
+        knowledge_base.load(recreate=False, upsert=True)
         print(f"✅ Knowledge base loaded.")
 
         agent = Agent(
